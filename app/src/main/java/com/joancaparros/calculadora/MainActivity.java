@@ -4,20 +4,24 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
+import android.widget.TextView;
+
 
 public class MainActivity extends AppCompatActivity {
-    private String operant1="";
-    private String operant2="";
-    private String operacio="";
-    private String resultat="";
+    private String currentOperation="";
+    private Integer resultat=0;
+    private Integer partialresult=0;
+    private StringBuilder screen = new StringBuilder();
+    private TextView calcText;
+    private Boolean error=false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         //Inicialització secció textual de la calculadora
-        final EditText calcText = (EditText) findViewById(R.id.calcText);
+        calcText = (TextView) findViewById(R.id.calcText);
         //Inicialització butons referents a valors
         Button value0 = (Button) findViewById(R.id.button0);
         Button value1 = (Button) findViewById(R.id.button1);
@@ -38,216 +42,178 @@ public class MainActivity extends AppCompatActivity {
         Button operationResult = (Button) findViewById(R.id.buttonResult);
         Button operationAC = (Button) findViewById(R.id.buttonAC);
 
-        //secció tractament de les accions click
+        //secció tractament de les accions click en numeros
         value0.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-               operant1 = operant1+"0";
-                calcText.setText(operant1);
-
-
+                setOperator("0");
             }
         });
-
         value1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = operant1+"1";
-                calcText.setText(operant1);
+                setOperator("1");
             }
         });
         value2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = operant1+"2";
-                calcText.setText(operant1);
+                setOperator("2");
             }
         });
         value3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = operant1+"3";
-                calcText.setText(operant1);
+                setOperator("3");
             }
         });
         value4.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = operant1+"4";
-                calcText.setText(operant1);
+                setOperator("4");
             }
         });
         value5.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = operant1+"5";
-                calcText.setText(operant1);
+                setOperator("5");
             }
         });
         value6.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = operant1+"6";
-                calcText.setText(operant1);
+                setOperator("6");
             }
         });
         value7.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = operant1+"7";
-                calcText.setText(operant1);
+                setOperator("7");
             }
         });
         value8.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = operant1+"8";
-                calcText.setText(operant1);
+                setOperator("8");
             }
         });
         value9.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = operant1+"9";
-                calcText.setText(operant1);
+                setOperator("9");
             }
         });
 
-        operationResult.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String evalucio=evalOperation(calcText.getText().toString());
-                calcText.setText(evalucio);
-
-            }
-        });
-
+        //secció tractament de les accions click en operacions + - * /
         operationAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = operant1+"+";
-                calcText.setText(operant1);
-            }
+                setOperation("+"); }
         });
         operationSub.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = operant1+"-";
-                calcText.setText(operant1);
-            }
+                setOperation("-"); }
         });
-
         operationMult.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = operant1+"*";
-                calcText.setText(operant1);
+                setOperation("*");
             }
         });
         operationDiv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = operant1+"/";
-                calcText.setText(operant1);
+                setOperation("/");
             }
         });
-        operationDiv.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                operant1 = "0";
-                calcText.setText(operant1);
-            }
-        });
+
+        //tractament click botó AC
         operationAC.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operant1 = "0";
-                calcText.setText(operant1);
+                cleanScreen();
             }
         });
 
+        //tractament click botó =
+        operationResult.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                currentOperation="=";
+                String evaluacio=evalOperation(calcText.getText().toString());
+                //es pot produir un error en cas de divisions per 0
+                if (error){
+                    evaluacio="ERR!";
+                    calcText.setText(evaluacio);
+                    screen.setLength(0);
+                    error=false;
+                }else{
+                    calcText.setText(evaluacio);
+                    screen.setLength(0);
+                    screen.append(evaluacio);
+                }
+            }
+        });
+    }
 
 
+    private void setOperator(String operator){
+        //si després d'un resultat introdueixen un altre número es neteja el resultat parcial
+        if(screen.length()>0 && currentOperation=="="){
+            cleanScreen();
+        }
+        screen.append(operator);
+        calcText.setText(screen.toString());
+        currentOperation="";
+    }
+
+    private void cleanScreen(){
+        System.out.println("netejant pantalla");
+        screen.setLength(0);
+        calcText.setText(screen.toString());
+    }
+
+    private void setOperation(String operation){
+        //en el cas que s'hagi introduit una operació però s'escolleig un altre es reemplaça
+        // sempre i quan l'expressió contingui +-/*
+        if(currentOperation!="" && screen.toString().matches(".*[+-/*].*")){
+            screen.setLength(screen.length()-1);
+        }
+        currentOperation=operation;
+        System.out.println("currentOperation:"+currentOperation);
+        screen.append(currentOperation);
+        calcText.setText(screen.toString());
     }
 
     private String evalOperation(String cadenaOperacio){
         System.out.println(cadenaOperacio);
-        double resultat = eval(cadenaOperacio);
-        String total2 = String.valueOf(Math.round(resultat));
-
+        int resultat = calc(cadenaOperacio);
+        String total2 = String.valueOf(resultat);
         return total2;
     }
 
-    public static double eval(final String str) {
-        return new Object() {
-            int pos = -1, ch;
-
-            void nextChar() {
-                ch = (++pos < str.length()) ? str.charAt(pos) : -1;
+    public int calc(String string){
+        int result=0;
+        String numbers="0123456789";
+        for (int i=0;i<string.length();i++){
+            if (numbers.contains(string.charAt(i)+"")){
+                result=result*10+(Integer.parseInt(string.charAt(i)+""));
             }
-
-            boolean eat(int charToEat) {
-                while (ch == ' ') nextChar();
-                if (ch == charToEat) {
-                    nextChar();
-                    return true;
+            else {
+                if (string.charAt(i)=='+'){ result+=calc(string.substring(i+1));}
+                if (string.charAt(i)=='-'){ result-=calc(string.substring(i+1));}
+                if (string.charAt(i)=='*'){ result*=calc(string.substring(i+1));}
+                if (string.charAt(i)=='/'){ try{result/=calc(string.substring(i+1));}
+                catch (ArithmeticException e){
+                    System.err.println("ERROR!");
+                    error=true;
                 }
-                return false;
-            }
-
-            double parse() {
-                nextChar();
-                double x = parseExpression();
-                if (pos < str.length()) throw new RuntimeException("Unexpected: " + (char)ch);
-                return x;
-            }
-
-            // Grammar:
-            // expression = term | expression `+` term | expression `-` term
-            // term = factor | term `*` factor | term `/` factor
-            // factor = `+` factor | `-` factor | `(` expression `)`
-            //        | number | functionName factor | factor `^` factor
-
-            double parseExpression() {
-                double x = parseTerm();
-                for (;;) {
-                    if      (eat('+')) x += parseTerm(); // addition
-                    else if (eat('-')) x -= parseTerm(); // subtraction
-                    else return x;
                 }
+                break;
             }
-
-            double parseTerm() {
-                double x = parseFactor();
-                for (;;) {
-                    if      (eat('*')) x *= parseFactor(); // multiplication
-                    else if (eat('/')) x /= parseFactor(); // division
-                    else return x;
-                }
-            }
-
-            double parseFactor() {
-                if (eat('+')) return parseFactor(); // unary plus
-                if (eat('-')) return -parseFactor(); // unary minus
-
-                double x;
-                int startPos = this.pos;
-                if (eat('(')) { // parentheses
-                    x = parseExpression();
-                    eat(')');
-                } else if ((ch >= '0' && ch <= '9') || ch == '.') { // numbers
-                    while ((ch >= '0' && ch <= '9') || ch == '.') nextChar();
-                    x = Double.parseDouble(str.substring(startPos, this.pos));
-                } else if (ch >= 'a' && ch <= 'z') { // functions
-                    while (ch >= 'a' && ch <= 'z') nextChar();
-                    String func = str.substring(startPos, this.pos);
-                    x = parseFactor();
-                } else {
-                    throw new RuntimeException("Unexpected: " + (char)ch);
-                }
-
-                return x;
-            }
-        }.parse();
+        }
+        return result;
     }
+
 }
