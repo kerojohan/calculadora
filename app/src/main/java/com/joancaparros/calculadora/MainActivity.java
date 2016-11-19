@@ -127,6 +127,33 @@ public class MainActivity extends AppCompatActivity {
                 setOperation("/");
             }
         });
+        operationChangeSign.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                //si es demana canviar el signe d'una expressió complexe es marcarà com a -(exp)
+                //si ja conté -(exp) es torna a deixar com a exp
+                //si es un numero reemplaçarem el valor pel mateix amb signe canviat
+                if(screen.toString().matches("^[+-]?\\d+$")) {
+                    //exemple 22->-22 -22->22
+                    Integer valor = Integer.parseInt(screen.toString())*(-1);
+                    screen.setLength(0);
+                    screen.append(valor);
+                    calcText.setText(screen);
+                } else if(screen.toString().matches("^[-(].*[)]$")) {
+                    //exemple -(36+6)->36+6
+                    screen.setLength(screen.length()-1);
+                    String valor= screen.toString().substring(2,screen.length());
+                    screen.setLength(0);
+                    screen.append(valor);
+                    calcText.setText(screen);
+                }else{
+                    //exemple 36+6->-(36+6)
+                    screen.insert(0,"-(");
+                    screen.append(")");
+                    calcText.setText(screen);
+                }
+            }
+        });
 
         //tractament click botó AC
         operationAC.setOnClickListener(new View.OnClickListener() {
@@ -142,7 +169,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 currentOperation="=";
                 String evaluacio=evalOperation(calcText.getText().toString());
-                //es pot produir un error en cas de divisions per 0
+                //s'indica error per divisió per 0
                 if (error){
                     evaluacio="ERR!";
                     calcText.setText(evaluacio);
@@ -159,7 +186,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void setOperator(String operator){
-        //si després d'un resultat introdueixen un altre número es neteja el resultat parcial
+        //si després d'un resultat introdueixen un altre número es neteja el resultat anterior
         if(screen.length()>0 && currentOperation=="="){
             cleanScreen();
         }
@@ -188,32 +215,74 @@ public class MainActivity extends AppCompatActivity {
 
     private String evalOperation(String cadenaOperacio){
         System.out.println(cadenaOperacio);
-        int resultat = calc(cadenaOperacio);
-        String total2 = String.valueOf(resultat);
+        double resultat =eval(cadenaOperacio) ;//calc(cadenaOperacio);
+        String total2 = String.valueOf(Math.round(resultat));
         return total2;
     }
 
-    public int calc(String string){
-        int result=0;
-        String numbers="0123456789";
-        for (int i=0;i<string.length();i++){
-            if (numbers.contains(string.charAt(i)+"")){
-                result=result*10+(Integer.parseInt(string.charAt(i)+""));
-            }
-            else {
-                if (string.charAt(i)=='+'){ result+=calc(string.substring(i+1));}
-                if (string.charAt(i)=='-'){ result-=calc(string.substring(i+1));}
-                if (string.charAt(i)=='*'){ result*=calc(string.substring(i+1));}
-                if (string.charAt(i)=='/'){ try{result/=calc(string.substring(i+1));}
-                catch (ArithmeticException e){
-                    System.err.println("ERROR!");
-                    error=true;
-                }
-                }
-                break;
-            }
-        }
-        return result;
-    }
+    public static double eval(final String str) {
+        return new Object() {
+            int pos = -1, ch;
 
+            void nextChar() {
+                ch = (++pos < str.length()) ? str.charAt(pos) : -1;
+            }
+
+            boolean eat(int charToEat) {
+                while (ch == ' ') nextChar();
+                if (ch == charToEat) {
+                    nextChar();
+                    return true;
+                }
+                return false;
+            }
+
+            double parse() {
+                nextChar();
+                double x = parseExpression();
+                if (pos < str.length()) throw new RuntimeException("Unexpected: " + (char)ch);
+                return x;
+            }
+
+            double parseExpression() {
+                double x = parseTerm();
+                for (;;) {
+                    if      (eat('+')) x += parseTerm(); // addition
+                    else if (eat('-')) x -= parseTerm(); // subtraction
+                    else return x;
+                }
+            }
+
+            double parseTerm() {
+                double x = parseFactor();
+                for (;;) {
+                    if      (eat('*')) x *= parseFactor(); // multiplication
+                    else if (eat('/')) x /= parseFactor(); // division
+                    else return x;
+                }
+            }
+
+            double parseFactor() {
+                if (eat('+')) return parseFactor(); // unary plus
+                if (eat('-')) return -parseFactor(); // unary minus
+
+                double x;
+                int startPos = this.pos;
+                if (eat('(')) { // parentheses
+                    x = parseExpression();
+                    eat(')');
+                } else if ((ch >= '0' && ch <= '9') || ch == '.') { // numbers
+                    while ((ch >= '0' && ch <= '9') || ch == '.') nextChar();
+                    x = Double.parseDouble(str.substring(startPos, this.pos));
+                } else if (ch >= 'a' && ch <= 'z') { // functions
+                    while (ch >= 'a' && ch <= 'z') nextChar();
+                    String func = str.substring(startPos, this.pos);
+                    x = parseFactor();
+                } else {
+                    throw new RuntimeException("Unexpected: " + (char)ch);
+                }
+                return x;
+            }
+        }.parse();
+    }
 }
