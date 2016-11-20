@@ -13,25 +13,41 @@
     <LinearLayout
         android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:gravity="top">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:id="@+id/calcText"
-            android:layout_weight="1"
-            android:textSize="36sp"
+            android:textSize="36dp"
             android:textAlignment="textEnd"
-            android:layout_marginTop="32dp" />
+            android:layout_marginTop="14dp"
+            android:height="56dp"
+            android:singleLine="true"
+            android:ellipsize="start" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:id="@+id/currentNum"
-            android:layout_weight="1"
-            android:textSize="16sp"
             android:textAlignment="textEnd"
-            android:layout_marginBottom="16dp" />
+            android:height="50dp"
+            android:textSize="30dp"
+            android:ellipsize="start"
+            android:maxLines="1"
+            android:singleLine="true" />
+
+        <Button
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/buttonHistory"
+            android:layout_weight="1"
+            android:text="History"
+            android:background="@android:color/holo_orange_dark"
+            android:gravity="center"
+            android:textSize="14sp" />
+
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="match_parent"

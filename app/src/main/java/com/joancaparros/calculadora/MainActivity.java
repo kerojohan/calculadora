@@ -5,23 +5,29 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.content.Intent;
+
+import java.util.ArrayList;
 
 
 public class MainActivity extends AppCompatActivity {
-    private String currentOperation="";
-    private Integer resultat=0;
-    private Integer partialresult=0;
+    private String currentOperation = "";
+    private Integer op1 = 0;
+    private Integer op2 = 0;
+    private Integer result = 0;
     private StringBuilder screen = new StringBuilder();
+    private StringBuilder operator1 = new StringBuilder();
     private TextView calcText;
+    private TextView currentNum;
+    private ArrayList<String> operationsList = new ArrayList<>();
     private Boolean error=false;
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         //Inicialització secció textual de la calculadora
         calcText = (TextView) findViewById(R.id.calcText);
+        currentNum = (TextView) findViewById(R.id.currentNum);
         //Inicialització butons referents a valors
         Button value0 = (Button) findViewById(R.id.button0);
         Button value1 = (Button) findViewById(R.id.button1);
@@ -41,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
         Button operationChangeSign = (Button) findViewById(R.id.buttonChangeSign);
         Button operationResult = (Button) findViewById(R.id.buttonResult);
         Button operationAC = (Button) findViewById(R.id.buttonAC);
-
+        Button showHistory = (Button) findViewById(R.id.buttonHistory);
         //secció tractament de les accions click en numeros
         value0.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -108,12 +114,14 @@ public class MainActivity extends AppCompatActivity {
         operationAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                setOperation("+"); }
+                setOperation("+");
+            }
         });
         operationSub.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                setOperation("-"); }
+                setOperation("-");
+            }
         });
         operationMult.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -127,162 +135,176 @@ public class MainActivity extends AppCompatActivity {
                 setOperation("/");
             }
         });
+        //tractament canvi de signe
         operationChangeSign.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //si es demana canviar el signe d'una expressió complexe es marcarà com a -(exp)
-                //si ja conté -(exp) es torna a deixar com a exp
-                //si es un numero reemplaçarem el valor pel mateix amb signe canviat
-                if(screen.toString().matches("^[+-]?\\d+$")) {
-                    //exemple 22->-22 -22->22
-                    Integer valor = Integer.parseInt(screen.toString())*(-1);
-                    screen.setLength(0);
-                    screen.append(valor);
-                    calcText.setText(screen);
-                } else if(screen.toString().matches("^[-(].*[)]$")) {
-                    //exemple -(36+6)->36+6
-                    screen.setLength(screen.length()-1);
-                    String valor= screen.toString().substring(2,screen.length());
-                    screen.setLength(0);
-                    screen.append(valor);
-                    calcText.setText(screen);
-                }else{
-                    //exemple 36+6->-(36+6)
-                    screen.insert(0,"-(");
-                    screen.append(")");
-                    calcText.setText(screen);
+                //si hi ha valor dins del currentNum procedim a canviar-li el signe
+                if (currentNum.getText().length() > 0) {
+                    Integer valor = Integer.parseInt(currentNum.getText().toString()) * (-1);
+                    operator1.setLength(0);
+                    operator1.append(valor);
+                    currentNum.setText(operator1);
                 }
             }
         });
-
         //tractament click botó AC
         operationAC.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                //es netegen les dues seccions de la pantalla i s'inicialitzen variables
                 cleanScreen();
+                cleanPartialScreen();
+                result = 0;
+                currentOperation="";
             }
         });
-
         //tractament click botó =
         operationResult.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                currentOperation="=";
-                String evaluacio=evalOperation(calcText.getText().toString());
-                //s'indica error per divisió per 0
-                if (error){
-                    evaluacio="ERR!";
-                    calcText.setText(evaluacio);
-                    screen.setLength(0);
-                    error=false;
-                }else{
-                    calcText.setText(evaluacio);
-                    screen.setLength(0);
-                    screen.append(evaluacio);
+                //el botó igual no s'habilita fins que no s'ha entrat una operació
+                if (currentOperation != "" && currentNum.length()>0) {
+                    evalOperation();
                 }
+            }
+        });
+        showHistory.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent =new Intent(getApplicationContext(),HistoryActivity.class);
+                intent.putExtra("listOperations", operationsList );
+                startActivity(intent);
             }
         });
     }
 
-
-    private void setOperator(String operator){
-        //si després d'un resultat introdueixen un altre número es neteja el resultat anterior
-        if(screen.length()>0 && currentOperation=="="){
+    private void setOperator(String operator) {
+        //Si es prem un numero quan hi havia un resultat aprofitable anterior
+        //es neteja la pantalla i es descarta el valor anterior
+        if (currentOperation == "") {
             cleanScreen();
+            error=false;
         }
-        screen.append(operator);
+        operator1.append(operator);
+        currentNum.setText(operator1);
+    }
+
+
+    private void setOperation(String operation) {
+        if (currentOperation == ""
+                && (currentNum.length()>0 || calcText.length()>0)
+                && (error==false)
+                ) {
+            currentOperation = operation;
+            //cal que s'hagi definit un valor anterior per marcar una operació
+            if (operator1.toString() != "") {
+                screen.append(operator1);
+                screen.append(operation);
+                cleanPartialScreen();
+                calcText.setText(screen.toString());
+            } else if (calcText.length() > 0) {
+                //si es decideix aprofitar el resultat de la operació anterior
+                //netegem pantalla i coloquem aquest resultat més l'operació actual
+                cleanScreen();
+                screen.append(result);
+                screen.append(operation);
+                cleanPartialScreen();
+                calcText.setText(screen.toString());
+            }
+        }else if(calcText.length()>0 && (error==false)){
+            //permeto que canviin la operació quan ja han entrat el segon operand
+            currentOperation = operation;
+            String valdisplay1 = calcText.getText().toString();
+            cleanScreen();
+            screen.append(valdisplay1.substring(0, valdisplay1.length() - 1));
+            screen.append(operation);
+            calcText.setText(screen.toString());
+        }
+
+    }
+
+    //Neteja del TextView principal
+    private void cleanScreen() {
+        screen.setLength(0);
+        screen.append("");
         calcText.setText(screen.toString());
+    }
+
+    //Neteja del TextView operant actual
+    private void cleanPartialScreen() {
+        operator1.setLength(0);
+        currentNum.setText(operator1.toString());
+    }
+
+    //Evaluació i de les operacions i de la llista
+    private void evalOperation(){
+        String valdisplay1 = calcText.getText().toString();
+        String valdisplay2 = currentNum.getText().toString();
+        try {
+            op1 = Integer.parseInt(valdisplay1.substring(0, valdisplay1.length() - 1));
+            op2 = Integer.parseInt(valdisplay2);
+            screen.append(valdisplay2);
+            screen.append("=");
+            screen.append(calc(op1, op2));
+        } catch (Exception e) {
+            //Deso en el registre les operacions amb resultats
+            //erronis per excedir la capacitat delInteger
+            error=true;
+            cleanScreen();
+            screen.append(valdisplay1);
+            screen.append(valdisplay2);
+            screen.append("=");
+            screen.append("Integer overflow");
+        }
+        //afegeixo la operació ben formatada a la llista d'operacions
+        addToHistoryList(screen.toString());
+        calcText.setText(screen.toString());
+        cleanPartialScreen();
         currentOperation="";
     }
 
-    private void cleanScreen(){
-        System.out.println("netejant pantalla");
-        screen.setLength(0);
-        calcText.setText(screen.toString());
+    //Afegir element a la llista, treient aquells més antics per sempre tenir 20 elements
+    private void addToHistoryList(String operation){
+        operationsList.add(operation);
+        if(operationsList.size()>20)
+            operationsList.remove(0);
     }
 
-    private void setOperation(String operation){
-        //en el cas que s'hagi introduit una operació però s'escolleig un altre es reemplaça
-        // sempre i quan l'expressió contingui +-/*
-        if(currentOperation!="" && screen.toString().matches(".*[+-/*].*")){
-            screen.setLength(screen.length()-1);
+    //Execució de càlculs
+    private String calc(Integer op1, Integer op2) {
+        switch (currentOperation) {
+            case "+":
+                result =(op1 + op2);
+                return result.toString();
+            case "-":
+                result =(op1 - op2);
+                return result.toString();
+            case "*":
+                result =(op1 * op2);
+                return result.toString();
+            case "/":
+                try {
+                    //contemplo les pecularitats de la divisió per 0
+                    if((op1>0) && op2==0) {
+                        //   result=0;
+                        error=true;
+                        return "∞";}
+                    else if((op1<0) && op2==0) {
+                        //   result=0;
+                        error=true;
+                        return "-∞";}
+                    if (op1==0 && op2==0) {
+                        error=true;
+                        //  result=0;
+                        return "ERROR!";}
+                    else{ result =(op1 / op2);
+                        return result.toString();}
+                } catch (Exception e) {
+                    System.err.println(e);
+                }
+            default:
+                return "";
         }
-        currentOperation=operation;
-        System.out.println("currentOperation:"+currentOperation);
-        screen.append(currentOperation);
-        calcText.setText(screen.toString());
-    }
-
-    private String evalOperation(String cadenaOperacio){
-        System.out.println(cadenaOperacio);
-        double resultat =eval(cadenaOperacio) ;//calc(cadenaOperacio);
-        String total2 = String.valueOf(Math.round(resultat));
-        return total2;
-    }
-
-    public static double eval(final String str) {
-        return new Object() {
-            int pos = -1, ch;
-
-            void nextChar() {
-                ch = (++pos < str.length()) ? str.charAt(pos) : -1;
-            }
-
-            boolean eat(int charToEat) {
-                while (ch == ' ') nextChar();
-                if (ch == charToEat) {
-                    nextChar();
-                    return true;
-                }
-                return false;
-            }
-
-            double parse() {
-                nextChar();
-                double x = parseExpression();
-                if (pos < str.length()) throw new RuntimeException("Unexpected: " + (char)ch);
-                return x;
-            }
-
-            double parseExpression() {
-                double x = parseTerm();
-                for (;;) {
-                    if      (eat('+')) x += parseTerm(); // addition
-                    else if (eat('-')) x -= parseTerm(); // subtraction
-                    else return x;
-                }
-            }
-
-            double parseTerm() {
-                double x = parseFactor();
-                for (;;) {
-                    if      (eat('*')) x *= parseFactor(); // multiplication
-                    else if (eat('/')) x /= parseFactor(); // division
-                    else return x;
-                }
-            }
-
-            double parseFactor() {
-                if (eat('+')) return parseFactor(); // unary plus
-                if (eat('-')) return -parseFactor(); // unary minus
-
-                double x;
-                int startPos = this.pos;
-                if (eat('(')) { // parentheses
-                    x = parseExpression();
-                    eat(')');
-                } else if ((ch >= '0' && ch <= '9') || ch == '.') { // numbers
-                    while ((ch >= '0' && ch <= '9') || ch == '.') nextChar();
-                    x = Double.parseDouble(str.substring(startPos, this.pos));
-                } else if (ch >= 'a' && ch <= 'z') { // functions
-                    while (ch >= 'a' && ch <= 'z') nextChar();
-                    String func = str.substring(startPos, this.pos);
-                    x = parseFactor();
-                } else {
-                    throw new RuntimeException("Unexpected: " + (char)ch);
-                }
-                return x;
-            }
-        }.parse();
     }
 }
